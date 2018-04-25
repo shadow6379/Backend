@@ -123,7 +123,7 @@ class AttitudeRecord(models.Model):
         (5, u'泄露他人隐私'),
         (6, u'与作品或讨论区主题无关'),
         (7, u'刷屏'),
-        (8, u'刷屏'),
+        (8, u'其它原因'),
     )
     report_reason = models.IntegerField(choices=report_reason_choices, null=True)
 
