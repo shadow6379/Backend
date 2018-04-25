@@ -11,7 +11,7 @@ urlpatterns = [
     url(r'^collect_book/$', views.collect_book),
     url(r'^subscribe_book/$', views.subscribe_book),
     url(r'^star_book/$', views.star_book),
-    url(r'^comment_section/$', views.CommentSection.as_view()),
-    url(r'^user_profile/$', views.UserProfile.as_view()),
+    url(r'^comment_section/(?P<bid>\d+)/$', views.CommentSection.as_view()),
+    url(r'^user_profile/(?P<uid>\d+)/$', views.UserProfile.as_view()),
     url(r'^retrieve/$', views.retrieve),
 ]
