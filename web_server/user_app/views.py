@@ -1,4 +1,9 @@
 from django.shortcuts import render
+from django.contrib.auth import login as login_confirm
+from django.contrib.auth import logout as logout_confirm
+from django.contrib.auth import authenticate
+from django.contrib.auth.decorators import login_required
+
 from django.views import View
 
 # Create your views here.
