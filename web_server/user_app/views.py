@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import render
 from django.contrib.auth import login as login_confirm
 from django.contrib.auth import logout as logout_confirm
@@ -10,6 +12,17 @@ from django.views import View
 
 
 def registry(request):
+    # args
+    email = request.POST.get('email')
+    username = request.POST.get('username')
+    password = request.POST.get('password')
+
+    # return HttpResponse(json.dumps(result))
+    result =  {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
     pass
 
 
