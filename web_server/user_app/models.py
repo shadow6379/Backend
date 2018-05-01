@@ -152,6 +152,7 @@ class ActiveRecord(models.Model):
     active_choices = (
         (0, u'预约'),
         (1, u'借阅'),
+        (2, u'归还')
     )
     active = models.IntegerField(choices=active_choices)
 
