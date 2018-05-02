@@ -5,6 +5,6 @@ sudo: required
 services:
         - docker
 script:
-        - docker build -t web_sever .
+        - docker build -t web_server .
         - docker run -e "ENV=UNIT" -p 8000:8000 web_server
 
