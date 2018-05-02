@@ -5,6 +5,7 @@ sudo: required
 install:
         - sudo pip install django
 script:
+        - django-admin --version
         - cd web_server
         - python manage.py test
 
