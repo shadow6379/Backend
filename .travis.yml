@@ -2,10 +2,9 @@ language: python
 python:
         - "3.6"
 sudo: required
-install:
-        - sudo pip install --upgrade pip
-        - sudo pip install django==2.0.3
+services:
+        - docker
 script:
-        - cd web_server
-        - python manage.py test
+        - docker build -t web_sever .
+        - docker run -e "ENV=UNIT" -p 8000:8000 web_server
 
