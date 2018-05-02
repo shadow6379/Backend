@@ -3,9 +3,9 @@ python:
         - "3.6"
 sudo: required
 install:
-        - sudo pip install django
+        - sudo pip install --upgrade pip
+        - sudo pip install django==2.0.3
 script:
-        - django-admin --version
         - cd web_server
         - python manage.py test
 
