@@ -4,5 +4,5 @@ python:
 sudo: required
 install:
         - sudo pip install django
-script: python web_server_/manage.py test
+script: python web_server/manage.py test
 
