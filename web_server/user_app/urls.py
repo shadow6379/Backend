@@ -14,4 +14,5 @@ urlpatterns = [
     url(r'^comment_section/(?P<bid>\d+)/$', views.CommentSection.as_view()),
     url(r'^user_profile/(?P<uid>\d+)/$', views.UserProfile.as_view()),
     url(r'^retrieve/$', views.retrieve),
+    url(r'^activate/(?P<token>\w+.[-_\w]*\w+.[-_\w]*\w+)/$',views.active_user),
 ]
