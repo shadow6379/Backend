@@ -4,7 +4,8 @@ from django.shortcuts import HttpResponse
 from django.views import View
 
 from manager_app import models
-from manager_app.local_info import auth_info
+from manager_app.utils.mgr_auth import SALT
+from manager_app.utils.mgr_auth import authenticate
 
 # Create your views here.
 
@@ -25,37 +26,12 @@ def login(request):
     if mgr.count() == 1:
         result['status'] = 'success'
         response = HttpResponse(json.dumps(result))
-        response.set_signed_cookie(key='username', value=username, salt=auth_info.SALT)
+        response.set_signed_cookie(key='username', value=username, salt=SALT)
         return response
     else:
         result['status'] = 'failure'
         result['error_msg'] = 'this user does not exist, or the password is wrong'
         return HttpResponse(json.dumps(result))
-
-
-def authenticate(func):
-
-    def inner(request, *args, **kwargs):
-        result = {
-            'status': '',
-            'error_msg': '',
-        }
-
-        try:
-            username = request.get_signed_cookie(key='username', salt=auth_info.SALT)
-        except KeyError:
-            result['status'] = 'failure'
-            result['error_msg'] = 'key error'
-            return HttpResponse(json.dumps(result))
-
-        if not username:
-            result['status'] = 'failure'
-            result['error_msg'] = 'need to be authenticated'
-            return HttpResponse(json.dumps(result))
-
-        return func(request, *args, **kwargs)
-
-    return inner
 
 
 @authenticate
