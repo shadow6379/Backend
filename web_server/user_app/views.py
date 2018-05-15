@@ -2,6 +2,7 @@ import json
 
 from django.shortcuts import render
 from django.shortcuts import HttpResponse
+from django.views import View
 from django.contrib.auth import login as login_confirm
 from django.contrib.auth import logout as logout_confirm
 from django.contrib.auth import authenticate
@@ -12,8 +13,7 @@ from django.db.models import Q
 from user_app.email_token import token_confirm
 from django.core.mail import send_mail
 from web_server.settings import EMAIL_HOST_USER, DOMAIN
-
-from django.views import View
+from user_app.utils.method_test import is_post
 # the website
 
 # Create your views here.
@@ -131,11 +131,57 @@ def active_user(request, token):
 
 
 def login(request):
-    pass
+    """
+    :param request:
+    request.POST.get('username')
+    request.POST.get('password')
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    user = authenticate(
+        username=request.POST.get('username'),
+        password=request.POST.get('password'),
+    )
+
+    if user is not None:
+        # pass authentication
+        result['status'] = 'success'
+        login_confirm(request, user)
+        return HttpResponse(json.dumps(result))
+    else:
+        result['status'] = 'failure'
+        result['error_msg'] = 'this user does not exist, or the password is wrong'
+        return HttpResponse(json.dumps(result))
 
 
+@login_required
 def logout(request):
-    pass
+    """
+    :param request:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    logout_confirm(request)
+    result['status'] = 'success'
+    return HttpResponse(json.dumps(result))
 
 
 def category(request, cid, begin, end):
@@ -146,34 +192,34 @@ def detail(request, bid):
     pass
 
 
+@login_required
 def collect_book(request):
     pass
 
 
+@login_required
 def subscribe_book(request):
     pass
 
 
+@login_required
 def star_book(request):
     pass
 
 
 class CommentSection(View):
-    # add auth decorator here
-    def dispatch(self, request, *args, **kwargs):
-        return super(CommentSection, self).dispatch(request, *args, **kwargs)
-
     @staticmethod
     def get(request):
         pass
 
     @staticmethod
+    @login_required
     def post(request):
         pass
 
 
 class UserProfile(View):
-    # add auth decorator here
+    @login_required
     def dispatch(self, request, *args, **kwargs):
         return super(UserProfile, self).dispatch(request, *args, **kwargs)
 
@@ -188,3 +234,8 @@ class UserProfile(View):
 
 def retrieve(request):
     pass
+
+
+# handle error request (wrong url)
+def error_handle(request):
+    return HttpResponse(json.dumps({'status': 'failure'}))

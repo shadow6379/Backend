@@ -6,6 +6,7 @@ from django.views import View
 from manager_app import models
 from manager_app.utils.mgr_auth import SALT
 from manager_app.utils.mgr_auth import authenticate
+from manager_app.utils.method_test import is_post
 
 # Create your views here.
 
@@ -24,9 +25,7 @@ def login(request):
     }
 
     # handle wrong method
-    if request.method != 'POST':
-        result['status'] = 'failure'
-        result['error_msg'] = 'please use POST method!'
+    if not is_post(request, result):
         return HttpResponse(json.dumps(result))
 
     username = request.POST.get('username')
