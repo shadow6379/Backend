@@ -147,6 +147,8 @@ def login(request):
     if not is_post(request, result):
         return HttpResponse(json.dumps(result))
 
+    print(request.POST.get('username'),request.POST.get('password'))
+
     user = authenticate(
         username=request.POST.get('username'),
         password=request.POST.get('password'),
