@@ -11,12 +11,26 @@ from manager_app.utils.mgr_auth import authenticate
 
 
 def login(request):
+    """
+    :param request:
+    request.POST.get('username')
+    request.POST.get('password')
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if request.method != 'POST':
+        result['status'] = 'failure'
+        result['error_msg'] = 'please use POST method!'
+        return HttpResponse(json.dumps(result))
+
     username = request.POST.get('username')
     password = request.POST.get('password')
-    result = {
-        'status': '',
-        'error_msg': '',
-    }
 
     mgr = models.ManagerInfo.objects.filter(
         username=username,

@@ -14,7 +14,7 @@ def authenticate(func):
         }
 
         try:
-            username = request.get_signed_cookie(key='username', salt=mgr_auth.SALT)
+            username = request.get_signed_cookie(key='username', salt=SALT)
         except KeyError:
             result['status'] = 'failure'
             result['error_msg'] = 'key error'
