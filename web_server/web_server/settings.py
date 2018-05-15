@@ -133,3 +133,5 @@ EMAIL_HOST_USER = '********@163.com'
 EMAIL_HOST_PASSWORD = '********'
 EMAIL_PORT = 25
 EMAIL_USE_TLS = True
+
+LOGIN_URL = '/'

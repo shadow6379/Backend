@@ -47,7 +47,7 @@ class UserInfo(models.Model):
     phone = models.CharField(max_length=20, null=True)
     # the user is authentication or not
     auth = models.BooleanField(default=False)
-    #auth = models.BinaryField(default=False)
+    # auth = models.BinaryField(default=False)
     auth_info = models.CharField(max_length=255, null=True)
     real_name = models.CharField(max_length=20, null=True)
     # other information, such as introduction

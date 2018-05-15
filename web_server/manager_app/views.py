@@ -4,18 +4,32 @@ from django.shortcuts import HttpResponse
 from django.views import View
 
 from manager_app import models
-from manager_app.local_info import auth_info
+from manager_app.utils.mgr_auth import SALT
+from manager_app.utils.mgr_auth import authenticate
+from manager_app.utils.method_test import is_post
 
 # Create your views here.
 
 
 def login(request):
+    """
+    :param request:
+    request.POST.get('username')
+    request.POST.get('password')
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
     username = request.POST.get('username')
     password = request.POST.get('password')
-    result = {
-        'status': '',
-        'error_msg': '',
-    }
 
     mgr = models.ManagerInfo.objects.filter(
         username=username,
@@ -25,37 +39,12 @@ def login(request):
     if mgr.count() == 1:
         result['status'] = 'success'
         response = HttpResponse(json.dumps(result))
-        response.set_signed_cookie(key='username', value=username, salt=auth_info.SALT)
+        response.set_signed_cookie(key='username', value=username, salt=SALT)
         return response
     else:
         result['status'] = 'failure'
         result['error_msg'] = 'this user does not exist, or the password is wrong'
         return HttpResponse(json.dumps(result))
-
-
-def authenticate(func):
-
-    def inner(request, *args, **kwargs):
-        result = {
-            'status': '',
-            'error_msg': '',
-        }
-
-        try:
-            username = request.get_signed_cookie(key='username', salt=auth_info.SALT)
-        except KeyError:
-            result['status'] = 'failure'
-            result['error_msg'] = 'key error'
-            return HttpResponse(json.dumps(result))
-
-        if not username:
-            result['status'] = 'failure'
-            result['error_msg'] = 'need to be authenticated'
-            return HttpResponse(json.dumps(result))
-
-        return func(request, *args, **kwargs)
-
-    return inner
 
 
 @authenticate
