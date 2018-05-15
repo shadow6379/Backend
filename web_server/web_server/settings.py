@@ -125,8 +125,11 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'static'),
 )
 
+DOMAIN = 'http://172.18.158.55:8000'
+
+# setting the email server
 EMAIL_HOST = 'smtp.163.com'
-EMAIL_HOST_USER = '***********@163.com'
+EMAIL_HOST_USER = '********@163.com'
 EMAIL_HOST_PASSWORD = '********'
 EMAIL_PORT = 25
 EMAIL_USE_TLS = True
