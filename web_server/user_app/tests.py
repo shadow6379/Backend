@@ -108,3 +108,30 @@ class LogoutTestCase(TestCase):
         response = client.post('/user_app/logout/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
+
+class CategoryTestCase(TestCase):
+    def setUp(self):
+        models.TypeInfo.objects.create(name='computer')
+
+        for i in range(1, 10):
+            obj = models.BookInfo(
+                name='name%s' % i,
+                author='author%s' % i,
+                brief='brief%s' % i,
+                ISBN='ISBN%s' % i,
+                publish_time='publish time %s' % i,
+                press='press%s' % i,
+                contents='contents%s' % i,
+            )
+            obj.save()
+            obj.types.set([1])
+
+    def test_category(self):
+        client = Client()
+
+        response = client.get('/user_app/category/1_3-5/')
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        response = client.get('/user_app/category/2_3-5/')
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
