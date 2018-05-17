@@ -237,6 +237,18 @@ def category(request, cid, begin, end):
 
 
 def detail(request, bid):
+    """
+    :param request:
+    :param bid: book id
+    :return:
+
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',
+        'error_msg': '',  # notes of failure
+    }
     pass
 
 
