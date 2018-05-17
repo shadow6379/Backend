@@ -14,6 +14,8 @@ from user_app.email_token import token_confirm
 from django.core.mail import send_mail
 from web_server.settings import EMAIL_HOST_USER, DOMAIN
 from user_app.utils.method_test import is_post
+from user_app.utils.method_test import is_get
+from user_app.utils.db_to_dict import process_book_obj
 # the website
 
 # Create your views here.
@@ -187,7 +189,51 @@ def logout(request):
 
 
 def category(request, cid, begin, end):
-    pass
+    """
+    :param request:
+    :param cid: book type's id
+    :param begin: [begin, end)
+    :param end:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_get(request, result):
+        return HttpResponse(json.dumps(result))
+
+    book_type = models.TypeInfo.objects.filter(id=cid).first()
+
+    if book_type is None:
+        result['status'] = 'failure'
+        result['error_msg'] = 'invalid category id'
+        return HttpResponse(json.dumps(result))
+
+    # get all related db obj
+    related_books = book_type.related_books.all()
+
+    # use dict to store db obj (id-info)
+    book_dict = dict()
+    for i in range(related_books.count()):
+        if i < int(begin):
+            continue
+        elif i >= int(end):
+            break
+
+        # transfer db obj to dict
+        book = process_book_obj(related_books[i])
+
+        book_dict[str(related_books[i].id)] = json.dumps(book)
+
+    result['status'] = "success"
+    result['msg'] = json.dumps(book_dict)
+
+    return HttpResponse(json.dumps(result))
 
 
 def detail(request, bid):
