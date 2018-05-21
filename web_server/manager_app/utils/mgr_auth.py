@@ -6,7 +6,6 @@ SALT = 'admin123'
 
 
 def authenticate(func):
-
     def inner(request, *args, **kwargs):
         result = {
             'status': '',
