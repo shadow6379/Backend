@@ -150,7 +150,7 @@ def login(request):
         return HttpResponse(json.dumps(result))
 
     print(request.POST.get('username'),request.POST.get('password'))
-
+    
     user = authenticate(
         username=request.POST.get('username'),
         password=request.POST.get('password'),
@@ -237,7 +237,8 @@ def category(request, cid, begin, end):
 
 
 def detail(request, bid):
-    """
+    """  The book detail information
+
     :param request:
     :param bid: book id
     :return:
@@ -246,10 +247,32 @@ def detail(request, bid):
     """
     result = {
         'status': '',  # 'success' or 'failure'
-        'msg': '',
+        'msg': '',  # msg of the book
         'error_msg': '',  # notes of failure
     }
-    pass
+    # the error method
+    if not is_get(request, result):
+        return HttpResponse(json.dumps(result))
+
+    # filter the list of book
+    # actually, the number of book is 0 or 1
+    books = models.BookInfo.objects.filter(id=bid).first()
+
+    # if the number of book is 0
+    if books is None:
+        result['status'] = 'failure'
+        result['error_msg'] = 'invalid book id'
+        return HttpResponse(json.dumps(result))
+
+    book_dict = dict()
+    # transfer db obj to dict
+    book = process_book_obj(books)
+    book_dict[str(books.id)] = json.dumps(book)
+
+    result['status'] = "success"
+    result['msg'] = json.dumps(book_dict)
+
+    return HttpResponse(json.dumps(result))
 
 
 @login_required
