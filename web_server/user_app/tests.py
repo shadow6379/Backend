@@ -135,3 +135,18 @@ class CategoryTestCase(TestCase):
         response = client.get('/user_app/category/2_3-5/')
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
 
+
+class DetailTestCase(TestCase):
+    def setUp(self):
+        CategoryTestCase.setUp(TestCase)
+
+    def test_detail(self):
+        client = Client()
+
+        response = client.get('/user_app/detail/5/')
+        # print(json.loads(response.content.decode())['msg'])
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        response = client.get('/user_app/detail/11/')
+        # print(json.loads(response.content.decode())['msg'])
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
