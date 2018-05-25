@@ -150,3 +150,47 @@ class DetailTestCase(TestCase):
         response = client.get('/user_app/detail/11/')
         # print(json.loads(response.content.decode())['msg'])
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+
+class CollectBookTestCase(TestCase):
+    def setUp(self):
+        User.objects.create_user(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
+        )
+        models.BookInfo.objects.create(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+
+    def test_collect_book(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/user_app/login/', request)
+
+        request = {
+            'bid': '1',
+        }
+        response = client.post("/user_app/collect_book/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'bid': '3',
+        }
+        response = client.post("/user_app/collect_book/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
