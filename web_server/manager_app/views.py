@@ -49,7 +49,25 @@ def login(request):
 
 @authenticate
 def logout(request):
-    pass
+    """
+    :param request:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    result['status'] = 'success'
+    response = HttpResponse(json.dumps(result))
+    response.delete_cookie(key='username')
+
+    return response
 
 
 @authenticate
