@@ -7,6 +7,8 @@ from manager_app import models
 from manager_app.utils.mgr_auth import SALT
 from manager_app.utils.mgr_auth import authenticate
 from manager_app.utils.method_test import is_post
+from manager_app.utils.method_test import is_get
+from manager_app.utils.db_to_dict import process_mgr_obj
 
 # Create your views here.
 
@@ -72,7 +74,33 @@ def logout(request):
 
 @authenticate
 def manager_info(request):
-    pass
+    """
+    :param request:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_get(request, result):
+        return HttpResponse(json.dumps(result))
+
+    username = request.get_signed_cookie(key='username', salt=SALT)
+    mgr = models.ManagerInfo.objects.filter(username=username).first()
+
+    if mgr:
+        result['status'] = 'success'
+        mgr_dict = process_mgr_obj(mgr)
+        result['msg'] = json.dumps(mgr_dict)
+    else:
+        result['status'] = 'failure'
+        result['error_msg'] = 'mgr db info may be deleted'
+
+    return HttpResponse(json.dumps(result))
 
 
 class ReportInfoBox(View):

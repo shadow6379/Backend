@@ -73,3 +73,27 @@ class LogoutTestCase(TestCase):
         response = client.post('/manager_app/logout/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
+
+class ManagerInfoTestCase(TestCase):
+    def setUp(self):
+        models.ManagerInfo.objects.create(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+
+    def test_manager_info(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/manager_info/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        response = client.post('/manager_app/manager_info/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
