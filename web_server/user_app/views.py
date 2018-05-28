@@ -7,15 +7,16 @@ from django.contrib.auth import login as login_confirm
 from django.contrib.auth import logout as logout_confirm
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
 
 from user_app import models
 from django.db.models import Q
 from user_app.email_token import token_confirm
 from django.core.mail import send_mail
-from web_server.settings import EMAIL_HOST_USER, DOMAIN
+from web_server.settings import EMAIL_HOST_USER, DOMAIN, DEBUG
 from user_app.utils.method_test import is_post
 from user_app.utils.method_test import is_get
-from user_app.utils.db_to_dict import process_book_obj
+from user_app.utils.db_to_dict import process_book_obj, process_user_obj
 # the website
 
 # Create your views here.
@@ -331,21 +332,135 @@ class CommentSection(View):
 
 
 class UserProfile(View):
-    @login_required
+    @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
         return super(UserProfile, self).dispatch(request, *args, **kwargs)
 
     @staticmethod
-    def get(request):
-        pass
+    def get(request, uid):
+        result = {
+            'status': '',
+            'msg': '',
+            'error_msg': '',
+        }
+        user = models.User.objects.filter(id=uid)
+        if not user:
+            result['status'] = 'failure'
+            result['error_msg'] = "user doesn't not existed"
+            return HttpResponse(json.dumps(result))
+
+        # user_dict = dict()
+        # transfer db obj to dict
+        user_info = process_user_obj(user[0])
+        # print(user_info)
+        result['status'] = "success"
+        result['msg'] = json.dumps(user_info)
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
-    def post(request):
-        pass
+    def post(request, uid):
+        result = {
+            'status': '',
+            'error_msg': '',
+        }
+        user = models.User.objects.filter(id=uid)
+        # actually, this situation can not happen
+        if not user:
+            result['status'] = 'failure'
+            result['error_msg'] = "user doesn't not existed"
+            return HttpResponse(json.dumps(result))
+
+        user = user[0]
+        user_info = models.UserInfo.objects.filter(user=user)
+
+        # actually, this situation can not happen
+        if not user_info:
+            result['status'] = 'success'
+            return HttpResponse(json.dumps(result))
+
+        # the information user can change are the 'other'
+        # the other information can't change
+        user_info = user_info[0]
+
+        # change the password
+        if request.POST.get('old_password'):
+            user = authenticate(
+                username=request.user.username,
+                password=request.POST.get('old_password'),
+            )
+            # if the old password is wrong
+            if not user:
+                result['status'] = 'failure'
+                result['error_msg'] = 'error password, please enter the correct password'
+                return HttpResponse(json.dumps(result))
+
+            # change password
+            user.set_password(request.POST.get('new_password'))
+            user.save()
+
+        if request.POST.get('other'):
+            user_info.gender = request.POST.get('other')
+
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
 
+# search books
 def retrieve(request):
-    pass
+    """  Searching books by
+
+        :param request:
+        :return:
+        HttpResponse(json.dumps(result))
+
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',  # information of the retrieve
+        'error_msg': '',  # notes of failure
+    }
+    # the error method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    book_dict = {} # a dictionary stored the search results
+
+    # get the Key word
+    search_name = request.POST.get('key')
+    # assume the Key word is book's name
+    books_by_name = models.BookInfo.objects.filter(name__icontains=search_name)
+    # assume the Key word is book's author
+    books_by_author = models.BookInfo.objects.filter(author__icontains=search_name)
+
+    # print the search results
+    if DEBUG:
+        print("search books by name: %s" % books_by_name)
+        print("search books by author: %s" % books_by_author)
+
+    # if find nothing, the status become false
+    if not books_by_name and not books_by_author:
+        result['status'] = "failed"
+        result['error_msg'] = "We can't find what you want, please try again."
+
+        return HttpResponse(json.dumps(result))
+
+    # get all the books through books_by_name
+    for i in range(books_by_name.count()):
+        book = process_book_obj(books_by_name[i])
+        book_dict[str(books_by_name[i].id)] = json.dumps(book)
+    # get all the books through books_by_author
+    for i in range(books_by_author.count()):
+        # if the book is not in the book_dict
+        if str(books_by_author[i].id) not in book_dict:
+            book = process_book_obj(books_by_author[i])
+            book_dict[str(books_by_author[i].id)] = json.dumps(book)
+
+    result['status'] = "success"
+    result['msg'] = json.dumps(book_dict)
+
+    return HttpResponse(json.dumps(result))
 
 
 # handle error request (wrong url)
