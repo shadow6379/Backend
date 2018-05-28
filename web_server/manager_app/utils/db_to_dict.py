@@ -1,6 +1,3 @@
-from manager_app import models
-
-
 def process_mgr_obj(obj):
     mgr = dict()
 
