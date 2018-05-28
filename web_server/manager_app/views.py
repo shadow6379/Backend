@@ -2,11 +2,15 @@ import json
 
 from django.shortcuts import HttpResponse
 from django.views import View
+from django.utils.decorators import method_decorator
 
 from manager_app import models
+from user_app import models as tmp    # optimization: message queue
 from manager_app.utils.mgr_auth import SALT
 from manager_app.utils.mgr_auth import authenticate
 from manager_app.utils.method_test import is_post
+from manager_app.utils.method_test import is_get
+from manager_app.utils.db_to_dict import process_mgr_obj
 
 # Create your views here.
 
@@ -49,16 +53,60 @@ def login(request):
 
 @authenticate
 def logout(request):
-    pass
+    """
+    :param request:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    result['status'] = 'success'
+    response = HttpResponse(json.dumps(result))
+    response.delete_cookie(key='username')
+
+    return response
 
 
 @authenticate
 def manager_info(request):
-    pass
+    """
+    :param request:
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_get(request, result):
+        return HttpResponse(json.dumps(result))
+
+    username = request.get_signed_cookie(key='username', salt=SALT)
+    mgr = models.ManagerInfo.objects.filter(username=username).first()
+
+    if mgr:
+        result['status'] = 'success'
+        mgr_dict = process_mgr_obj(mgr)
+        result['msg'] = json.dumps(mgr_dict)
+    else:
+        result['status'] = 'failure'
+        result['error_msg'] = 'mgr db info may be deleted'
+
+    return HttpResponse(json.dumps(result))
 
 
 class ReportInfoBox(View):
-    @authenticate
+    @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
         return super(ReportInfoBox, self).dispatch(request, *args, **kwargs)
 
@@ -68,11 +116,46 @@ class ReportInfoBox(View):
 
     @staticmethod
     def post(request):
-        pass
+        """
+        :param request:
+        request.POST.get('protocol'): '0' means delete comment,
+                                    '1' means delete related report
+        request.POST.get('cid'): target comment id
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        protocol = request.POST.get('protocol')
+        if protocol is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'protocol required'
+
+        cid = request.POST.get('cid')
+        if cid is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'cid (comment id) required'
+
+        if protocol == '0':
+            # delete comment
+            tmp.Comment.objects.filter(id=cid).delete()
+            result['status'] = 'success'
+        elif protocol == '1':
+            # delete related reports
+            tmp.AttitudeRecord.objects.filter(cid=cid).delete()
+            result['status'] = 'success'
+        else:
+            result['status'] = 'failure'
+            result['error_msg'] = 'invalid protocol'
+
+        return HttpResponse(json.dumps(result))
 
 
 class InventoryManagement(View):
-    @authenticate
+    @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
         return super(InventoryManagement, self).dispatch(request, *args, **kwargs)
 
@@ -86,7 +169,7 @@ class InventoryManagement(View):
 
 
 class Debit(View):
-    @authenticate
+    @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
         return super(Debit, self).dispatch(request, *args, **kwargs)
 
@@ -100,7 +183,7 @@ class Debit(View):
 
 
 class Return(View):
-    @authenticate
+    @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
         return super(Return, self).dispatch(request, *args, **kwargs)
 
