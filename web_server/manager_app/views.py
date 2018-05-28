@@ -11,6 +11,7 @@ from manager_app.utils.mgr_auth import authenticate
 from manager_app.utils.method_test import is_post
 from manager_app.utils.method_test import is_get
 from manager_app.utils.db_to_dict import process_mgr_obj
+from manager_app.utils.db_to_dict import process_record_obj
 
 # Create your views here.
 
@@ -189,9 +190,73 @@ class Return(View):
 
     @staticmethod
     def get(request):
-        pass
+        """
+        :param request:
+        request.GET.get('username')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',    # the selected user's all debit record
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'username'
+        username = request.GET.get('username')
+        if username is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'username required'
+            return HttpResponse(json.dumps(result))
+
+        # ensure related user is in db
+        user = tmp.UserInfo.objects.filter(user__username=username).first()
+        if user is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related user not exists'
+            return HttpResponse(json.dumps(result))
+
+        # process data
+        records = tmp.ActiveRecord.objects.filter(uid=user.id)
+        record_dict = {}
+        for i in range(records.count()):
+            record = process_record_obj(records[i])
+            record_dict[str(records[i].id)] = json.dumps(record)
+        result['msg'] = json.dumps(record_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):
-        pass
+        """
+        :param request:
+        request.POST.get('rid'):
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'rid'
+        rid = request.POST.get('rid')
+        if rid is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'rid (record id) required'
+            return HttpResponse(json.dumps(result))
+
+        # ensure related active record is in db
+        record = tmp.ActiveRecord.objects.filter(id=rid).first()
+        if record is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related active record not exists'
+            return HttpResponse(json.dumps(result))
+
+        # delete target active record
+        tmp.ActiveRecord.objects.filter(id=rid).delete()
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
