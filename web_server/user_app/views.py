@@ -35,7 +35,7 @@ def registry(request):
     }
 
     # if the username or email has existed, register failed
-    # if the email is not active, the inactive User will be delete
+    # if the email is+ not active, the inactive User will be delete
 
     '''
     determine the username is exist or not
@@ -277,7 +277,36 @@ def detail(request, bid):
 
 @login_required
 def collect_book(request):
-    pass
+    """
+    :param request:
+    request.POST.get('bid'): book id
+    request.user.id: user id
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    book = models.BookInfo.objects.filter(id=int(request.POST.get('bid'))).first()
+
+    # book not exist
+    if book is None:
+        result['status'] = 'failure'
+        result['error_msg'] = 'invalid book id'
+        return HttpResponse(json.dumps(result))
+
+    user = models.UserInfo.objects.filter(id=int(request.user.id)).first()
+    # add the book to user's collections
+    user.collections.add(int(request.POST.get('bid')))
+    result['status'] = 'success'
+
+    return HttpResponse(json.dumps(result))
 
 
 @login_required
