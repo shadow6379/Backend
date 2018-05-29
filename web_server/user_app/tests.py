@@ -194,3 +194,77 @@ class CollectBookTestCase(TestCase):
         response = client.post("/user_app/collect_book/", request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
 
+
+class RetrieveTestCase(TestCase):
+    def setUp(self):
+        CategoryTestCase.setUp(TestCase)
+
+    def test_retrieve(self):
+        client = Client()
+        # Accurate matching
+        request = {
+            'key': 'name'
+        }
+        response = client.post('/user_app/retrieve/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        # fuzzy matching
+        request = {
+            'key': 'auth'
+        }
+        response = client.post('/user_app/retrieve/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        # failed matching
+        request = {
+            'key': 'failed'
+        }
+        response = client.post('/user_app/retrieve/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failed')
+
+
+class UserProfileTestCase(TestCase):
+    def setUp(self):
+        user = User.objects.create_user(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+        models.UserInfo.objects.create(user=user)
+
+    def test_user_profile(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+
+        request_new = {
+            'other': 'very handsome',
+            'old_password': '123456',
+            'new_password': '1234567890',
+        }
+        client.post('/user_app/login/', request)
+
+        # test get method, have user
+        response = client.get('/user_app/user_profile/1/')
+        # print(response.content.decode())
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        # test get method, have user
+        response = client.get('/user_app/user_profile/2/')
+        # print(response.content.decode())
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        # test post method, change nothing
+        response = client.post('/user_app/user_profile/1/')
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        # test post method, change password
+        response = client.post('/user_app/user_profile/1/', request_new)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        # after change password, login failure by old password
+        response = client.post('/user_app/login/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
