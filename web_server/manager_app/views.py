@@ -176,7 +176,31 @@ class Debit(View):
 
     @staticmethod
     def get(request):
-        pass
+        """get user's order record
+        :param request:
+        request.GET.get('username')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # the selected user's all debit record
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'username'
+        username = request.GET.get('username')
+        if username is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'username required'
+            return HttpResponse(json.dumps(result))
+
+        # ensure related user is in db
+        user = tmp.UserInfo.objects.filter(user__username=username).first()
+        if user is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related user not exists'
+            return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):
@@ -190,7 +214,7 @@ class Return(View):
 
     @staticmethod
     def get(request):
-        """
+        """get user's debit record
         :param request:
         request.GET.get('username')
         :return:
@@ -217,7 +241,7 @@ class Return(View):
             return HttpResponse(json.dumps(result))
 
         # process data
-        records = tmp.ActiveRecord.objects.filter(uid=user.id)
+        records = tmp.ActiveRecord.objects.filter(uid=user.id).filter(active=1)
         record_dict = {}
         for i in range(records.count()):
             record = process_record_obj(records[i])

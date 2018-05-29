@@ -125,6 +125,14 @@ class ReportInfoBoxTestCase(TestCase):
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
 
 
+class InventoryManagementTestCase(TestCase):
+    pass
+
+
+class DebitTestCase(TestCase):
+    pass
+
+
 class ReturnTestCase(TestCase):
     def setUp(self):
         models.ManagerInfo.objects.create(
