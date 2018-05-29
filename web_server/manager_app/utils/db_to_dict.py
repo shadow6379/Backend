@@ -1,3 +1,6 @@
+from user_app import models as tmp
+
+
 def process_mgr_obj(obj):
     mgr = dict()
 
@@ -8,3 +11,16 @@ def process_mgr_obj(obj):
     mgr['other'] = obj.other
 
     return mgr
+
+
+def process_record_obj(obj):
+    record = dict()
+
+    user = tmp.UserInfo.objects.filter(id=obj.uid.id).first()
+    book = tmp.BookInfo.objects.filter(id=obj.bid.id).first()
+
+    record['username'] = user.user.username
+    record['book'] = book.name
+    record['active_time'] = str(obj.active_time)
+
+    return record
