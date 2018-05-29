@@ -246,6 +246,7 @@ class Return(View):
             result['status'] = 'failure'
             result['error_msg'] = 'rid (record id) required'
             return HttpResponse(json.dumps(result))
+        rid = int(rid)
 
         # ensure related active record is in db
         record = tmp.ActiveRecord.objects.filter(id=rid).first()
