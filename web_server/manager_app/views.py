@@ -279,6 +279,13 @@ class Return(View):
             result['error_msg'] = 'related active record not exists'
             return HttpResponse(json.dumps(result))
 
+        # add return record
+        tmp.ActiveRecord.objects.create(
+            uid=record.uid,
+            bid=record.bid,
+            active=2,
+        )
+
         # delete target active record
         tmp.ActiveRecord.objects.filter(id=rid).delete()
         result['status'] = 'success'
