@@ -13,6 +13,7 @@ from manager_app.utils.method_test import is_post
 from manager_app.utils.method_test import is_get
 from manager_app.utils.db_to_dict import process_mgr_obj
 from manager_app.utils.db_to_dict import process_record_obj
+from manager_app.utils.db_to_dict import process_report_obj
 
 # Create your views here.
 
@@ -114,7 +115,50 @@ class ReportInfoBox(View):
 
     @staticmethod
     def get(request):
-        pass
+        """
+        :param request:
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',
+            'error_msg': '',  # notes of failure
+        }
+
+        reports = tmp.AttitudeRecord.objects.filter(attitude=2)
+        report_dict = dict()
+        for i in range(reports.count()):
+            report_reason = str(reports[i].report_reason)
+
+            cid = str(reports[i].cid.id)
+            if cid not in report_dict.keys():
+                report_dict[cid] = {
+                    'content': reports[i].cid.content,
+                    'report_reasons': {
+                        '0': '0',
+                        '1': '0',
+                        '2': '0',
+                        '3': '0',
+                        '4': '0',
+                        '5': '0',
+                        '6': '0',
+                        '7': '0',
+                        '8': '0',
+                    },
+                }
+            report_dict[cid]['report_reasons'][report_reason] = \
+                str(int(report_dict[cid]['report_reasons'][report_reason]) + 1)
+
+        for key in report_dict.keys():
+            report_dict[key]['report_reasons'] = \
+                json.dumps(report_dict[key]['report_reasons'])
+            report_dict[key] = json.dumps(report_dict[key])
+
+        result['msg'] = json.dumps(report_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):

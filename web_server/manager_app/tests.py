@@ -108,6 +108,55 @@ class ReportInfoBoxTestCase(TestCase):
             email='test@163.com',
         )
 
+        User.objects.create_user(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+        user = User.objects.filter(username='test').first()
+        u = tmp.UserInfo.objects.create(
+            user=user,
+        )
+        u.save()
+
+        b = tmp.BookInfo(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+        b.save()
+
+        c = tmp.Comment(
+            uid=u,
+            bid=b,
+            content='MySQL, Redis'
+        )
+        c.save()
+
+        tmp.AttitudeRecord.objects.create(
+            cid=c,
+            uid=u,
+            attitude=2,
+            report_reason=4,
+        )
+
+    def test_get(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
     def test_post(self):
         client = Client()
 
@@ -116,6 +165,20 @@ class ReportInfoBoxTestCase(TestCase):
             'password': '123456',
         }
         client.post('/manager_app/login/', request)
+
+        request = {
+            'protocol': '1',
+            'cid': '1',
+        }
+        response = client.post('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'cid': '1',
+        }
+        response = client.post('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         request = {
             'protocol': '2',
