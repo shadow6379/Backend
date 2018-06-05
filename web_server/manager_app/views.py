@@ -3,6 +3,7 @@ import json
 from django.shortcuts import HttpResponse
 from django.views import View
 from django.utils.decorators import method_decorator
+from django.db import transaction
 
 from manager_app import models
 from user_app import models as tmp    # optimization: message queue
@@ -11,6 +12,7 @@ from manager_app.utils.mgr_auth import authenticate
 from manager_app.utils.method_test import is_post
 from manager_app.utils.method_test import is_get
 from manager_app.utils.db_to_dict import process_mgr_obj
+from manager_app.utils.db_to_dict import process_record_obj
 
 # Create your views here.
 
@@ -175,11 +177,105 @@ class Debit(View):
 
     @staticmethod
     def get(request):
-        pass
+        """get user's order record
+        :param request:
+        request.GET.get('username')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # the selected user's all debit record
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'username'
+        username = request.GET.get('username')
+        if username is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'username required'
+            return HttpResponse(json.dumps(result))
+
+        # ensure related user is in db
+        user = tmp.UserInfo.objects.filter(user__username=username).first()
+        if user is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related user not exists'
+            return HttpResponse(json.dumps(result))
+
+        # process data
+        records = tmp.ActiveRecord.objects.filter(uid=user.id).filter(active=0)
+        record_dict = {}
+        for i in range(records.count()):
+            record = process_record_obj(records[i])
+            record_dict[str(records[i].id)] = json.dumps(record)
+        result['msg'] = json.dumps(record_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):
-        pass
+        """
+        :param request:
+        request.POST.get('msg')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'msg'
+        msg = request.POST.get('msg')
+        if msg is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'msg (debit message) required'
+            return HttpResponse(json.dumps(result))
+
+        msg = json.loads(msg)
+
+        # ensure msg contains 'username' and 'bid'
+        if 'username' not in msg.keys() or 'bid' not in msg.keys():
+            result['status'] = 'failure'
+            result['error_msg'] = 'msg must contain username and bid'
+            return HttpResponse(json.dumps(result))
+
+        # ensure user exists
+        user = tmp.UserInfo.objects.filter(user__username=msg['username']).first()
+        if user is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related user not exists'
+            return HttpResponse(json.dumps(result))
+
+        # ensure book exists
+        book = tmp.BookInfo.objects.filter(id=int(msg['bid'])).first()
+        if book is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'the desired book not exists'
+            return HttpResponse(json.dumps(result))
+
+        # start a transaction
+        with transaction.atomic():
+            # get the book instance
+            book_instance = book.book_instances.filter(state=0).first()
+            if book_instance is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'inadequate inventory'
+                return HttpResponse(json.dumps(result))
+            book_instance.state = 2
+            book_instance.save()
+
+            # record debit
+            tmp.ActiveRecord.objects.create(
+                uid=user,
+                bid=book_instance,
+                active=1,
+            )
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
 
 class Return(View):
@@ -189,9 +285,85 @@ class Return(View):
 
     @staticmethod
     def get(request):
-        pass
+        """get user's debit record
+        :param request:
+        request.GET.get('username')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',    # the selected user's all debit record
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'username'
+        username = request.GET.get('username')
+        if username is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'username required'
+            return HttpResponse(json.dumps(result))
+
+        # ensure related user is in db
+        user = tmp.UserInfo.objects.filter(user__username=username).first()
+        if user is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related user not exists'
+            return HttpResponse(json.dumps(result))
+
+        # process data
+        records = tmp.ActiveRecord.objects.filter(uid=user.id).filter(active=1)
+        record_dict = {}
+        for i in range(records.count()):
+            record = process_record_obj(records[i])
+            record_dict[str(records[i].id)] = json.dumps(record)
+        result['msg'] = json.dumps(record_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):
-        pass
+        """
+        :param request:
+        request.POST.get('rid'):
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        # ensure request contains 'rid'
+        rid = request.POST.get('rid')
+        if rid is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'rid (record id) required'
+            return HttpResponse(json.dumps(result))
+        rid = int(rid)
+
+        # ensure related active record is in db
+        record = tmp.ActiveRecord.objects.filter(id=rid).first()
+        if record is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'related active record not exists'
+            return HttpResponse(json.dumps(result))
+
+        # add return record
+        tmp.ActiveRecord.objects.create(
+            uid=record.uid,
+            bid=record.bid,
+            active=2,
+        )
+
+        # change related book instance's state into common
+        record.bid.state = 0
+        record.bid.save()
+
+        # delete target active record
+        tmp.ActiveRecord.objects.filter(id=rid).delete()
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
