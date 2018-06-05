@@ -13,7 +13,6 @@ from manager_app.utils.method_test import is_post
 from manager_app.utils.method_test import is_get
 from manager_app.utils.db_to_dict import process_mgr_obj
 from manager_app.utils.db_to_dict import process_record_obj
-from manager_app.utils.db_to_dict import process_report_obj
 
 # Create your views here.
 
