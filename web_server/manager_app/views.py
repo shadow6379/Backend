@@ -13,6 +13,7 @@ from manager_app.utils.method_test import is_post
 from manager_app.utils.method_test import is_get
 from manager_app.utils.db_to_dict import process_mgr_obj
 from manager_app.utils.db_to_dict import process_record_obj
+from manager_app.utils.db_to_dict import process_book_obj
 
 # Create your views here.
 
@@ -182,11 +183,13 @@ class ReportInfoBox(View):
         if protocol is None:
             result['status'] = 'failure'
             result['error_msg'] = 'protocol required'
+            return HttpResponse(json.dumps(result))
 
         cid = request.POST.get('cid')
         if cid is None:
             result['status'] = 'failure'
             result['error_msg'] = 'cid (comment id) required'
+            return HttpResponse(json.dumps(result))
 
         if protocol == '0':
             # delete comment
@@ -210,11 +213,166 @@ class InventoryManagement(View):
 
     @staticmethod
     def get(request):
-        pass
+        """retrieve book by keyword
+        :param request:
+        request.GET.get('key')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # information of the retrieve
+            'error_msg': '',  # notes of failure
+        }
+
+        key = request.GET.get('key')
+
+        if key is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'key required'
+            return HttpResponse(json.dumps(result))
+
+        # keyword in book name
+        books_by_name = tmp.BookInfo.objects.filter(name__icontains=key)
+        # keyword in author name
+        books_by_author = tmp.BookInfo.objects.filter(author__icontains=key)
+
+        book_dict = dict()
+        # process books_by_name
+        for i in range(books_by_name.count()):
+            book = process_book_obj(books_by_name[i])
+            book_dict[str(books_by_name[i].id)] = json.dumps(book)
+        # process books_by_author
+        for i in range(books_by_author.count()):
+            # ensure the book is not in the book_dict
+            if str(books_by_author[i].id) not in book_dict.keys():
+                book = process_book_obj(books_by_author[i])
+                book_dict[str(books_by_author[i].id)] = json.dumps(book)
+        result['msg'] = json.dumps(book_dict)
+        result['status'] = "success"
+
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     def post(request):
-        pass
+        """
+        :param request:
+        request.POST.get('protocol'): '0' means add item,
+                                    '1' means update item
+        request.POST.get('msg')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        protocol = request.POST.get('protocol')
+        if protocol is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'protocol required'
+            return HttpResponse(json.dumps(result))
+
+        msg = request.POST.get('msg')
+        if msg is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'msg required'
+            return HttpResponse(json.dumps(result))
+
+        msg = json.loads(msg)
+        msg['types'] = json.loads(msg['types'])
+
+        if protocol == '0':
+            obj = tmp.BookInfo.objects.filter(ISBN=msg['ISBN']).first()
+
+            if obj is not None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'ISBN is not unique'
+                return HttpResponse(json.dumps(result))
+
+            types = []
+            for v in msg['types'].values():
+                t = tmp.TypeInfo.objects.filter(name=v).first()
+
+                # ensure book type is valid
+                if t is None:
+                    result['status'] = 'failure'
+                    result['error_msg'] = 'invalid book type'
+                    return HttpResponse(json.dumps(result))
+                types.append(t.id)
+
+            # create book obj
+            book = tmp.BookInfo(
+                cover=msg['cover'],
+                name=msg['name'],
+                author=msg['author'],
+                brief=msg['brief'],
+                ISBN=msg['ISBN'],
+                publish_time=msg['publish_time'],
+                press=msg['press'],
+                contents=msg['contents'],
+            )
+            book.save()
+            book.types.set(types)
+            book.save()
+
+            # create book instance
+            for i in range(int(msg['inventory'])):
+                tmp.BookInstance.objects.create(
+                    bid=book,
+                    state=0,
+                )
+        elif protocol == '1':
+            book = tmp.BookInfo.objects.filter(ISBN=msg['ISBN']).first()
+
+            # ensure book exist
+            if book is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'book identified by ISBN is not in the DB'
+                return HttpResponse(json.dumps(result))
+
+            # book instance can not be deleted
+            count = book.book_instances.all().count()
+            if count > int(msg['inventory']):
+                result['status'] = 'failure'
+                result['error_msg'] = 'can not delete book instance'
+                return HttpResponse(json.dumps(result))
+
+            types = []
+            for v in msg['types'].values():
+                t = tmp.TypeInfo.objects.filter(name=v).first()
+
+                # ensure book type is valid
+                if t is None:
+                    result['status'] = 'failure'
+                    result['error_msg'] = 'invalid book type'
+                    return HttpResponse(json.dumps(result))
+                types.append(t.id)
+
+            book.cover = msg['cover']
+            book.name = msg['name']
+            book.author = msg['author']
+            book.brief = msg['brief']
+            book.publish_time = msg['publish_time']
+            book.press = msg['press']
+            book.contents = msg['contents']
+            book.types.set(types)
+            book.save()
+
+            # create book instance
+            for i in range(int(msg['inventory']) - count):
+                tmp.BookInstance.objects.create(
+                    bid=book,
+                    state=0,
+                )
+        else:
+            result['status'] = 'failure'
+            result['error_msg'] = 'invalid protocol'
+            return HttpResponse(json.dumps(result))
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
 
 
 class Debit(View):
