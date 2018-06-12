@@ -189,7 +189,125 @@ class ReportInfoBoxTestCase(TestCase):
 
 
 class InventoryManagementTestCase(TestCase):
-    pass
+    def setUp(self):
+        models.ManagerInfo.objects.create(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+
+        tmp.TypeInfo.objects.create(
+            name='computer'
+        )
+
+        book = tmp.BookInfo(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+        book.save()
+        book.types.set([1])
+        book.save()
+
+        tmp.BookInstance.objects.create(
+            bid=book,
+            state=0,
+        )
+
+    def test_get(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/?key=name', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/?key=author', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+    def test_post(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {
+            'protocol': '0',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'test',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        print(json.loads(response.content.decode())['error_msg'])
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'test',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        request = {
+            'protocol': '1',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'ISBN',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
 
 class DebitTestCase(TestCase):
