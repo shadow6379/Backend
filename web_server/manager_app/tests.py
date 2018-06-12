@@ -310,7 +310,6 @@ class InventoryManagementTestCase(TestCase):
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
 
-
 class DebitTestCase(TestCase):
     def setUp(self):
         models.ManagerInfo.objects.create(
