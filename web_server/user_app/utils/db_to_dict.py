@@ -50,3 +50,19 @@ def process_user_obj(obj):
     return user
 
 
+def comment_to_dict(obj):
+    comment_content = dict()
+    comment_content["id"] = str(obj.id)
+    comment_content["comment_time"] = str(obj.comment_time)
+    comment_content["content"] = obj.content
+    comment_content["user_id"] = str(obj.uid_id)
+    comment_content["parent_id"] = str(obj.parent_comment_id)
+
+    agree_times = models.AttitudeRecord.objects.filter(cid=obj, attitude=0).count()
+    disagree_times = models.AttitudeRecord.objects.filter(cid=obj, attitude=1).count()
+    reported_times = models.AttitudeRecord.objects.filter(cid=obj, attitude=1).count()
+    comment_content["agree_times"] = str(agree_times)
+    comment_content["disagree_times"] = str(disagree_times)
+    comment_content["reported_times"] = str(reported_times)
+
+    return comment_content
