@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.db import utils
 from django.db import transaction
+from django.db.models import Avg
 
 from user_app import models
 from user_app.email_token import token_confirm
@@ -412,11 +413,12 @@ def star_book(request):
         result['status'] = 'failure'
         result['error_msg'] = 'You have starred'
         return HttpResponse(json.dumps(result))
-    '''
+    # update the score oof the book
     book = models.BookInfo.objects.get(id=book_id)
-    book.score = star
+    score = models.ScoreToBook.objects.filter(bid=book).aggregate(Avg('score'))
+    book.score = score['score__avg']
     book.save()
-    '''
+    print(book.score)
     result['status'] = 'success'
     return HttpResponse(json.dumps(result))
 
@@ -616,14 +618,15 @@ def retrieve(request):
         'msg': '',  # information of the retrieve
         'error_msg': '',  # notes of failure
     }
-    # the error method
-    if not is_post(request, result):
-        return HttpResponse(json.dumps(result))
 
     book_dict = {} # a dictionary stored the search results
 
     # get the Key word
-    search_name = request.POST.get('key')
+    search_name = request.GET.get('key')
+    if not search_name:
+        result['status'] = 'failure'
+        result['error_msg'] = 'please offer the key word'
+        return HttpResponse(json.dumps(result))
     # assume the Key word is book's name
     books_by_name = models.BookInfo.objects.filter(name__icontains=search_name)
     # assume the Key word is book's author
