@@ -206,21 +206,21 @@ class RetrieveTestCase(TestCase):
         request = {
             'key': 'name'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         # fuzzy matching
         request = {
             'key': 'auth'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         # failed matching
         request = {
             'key': 'failed'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failed')
 
 
@@ -268,4 +268,133 @@ class UserProfileTestCase(TestCase):
 
         # after change password, login failure by old password
         response = client.post('/user_app/login/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+
+class StarBookTestCase(TestCase):
+    def setUp(self):
+        CollectBookTestCase.setUp(TestCase)
+
+    def test_star_book(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/user_app/login/', request)
+
+        request = {
+            'bid': '1',
+            'star': '5',
+        }
+        response = client.post("/user_app/star_book/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        response = client.post("/user_app/star_book/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+
+class CommentSectionTestCase(TestCase):
+    def setUp(self):
+        CollectBookTestCase.setUp(TestCase)
+
+    def test_post(self):
+        client = Client()
+        # login in
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/user_app/login/', request)
+        # comment content
+        request = {
+            'protocol': '0',
+            'msg': 'It is a good book',
+            'parent': '0',
+        }
+        # add comment
+        response = client.post("/user_app/comment_section/1/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+        # add comment, you can comment a book more than one time
+        response = client.post("/user_app/comment_section/1/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+        # agree the comment
+        request = {
+            'protocol': '1',
+            'msg': '',
+            'parent': '1',
+        }
+        response = client.post("/user_app/comment_section/1/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+        # You can only give your attitude one time.
+        request['protocol'] = '2'
+        response = client.post("/user_app/comment_section/1/", request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+    def test_get(self):
+        client = Client()
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/user_app/login/', request)
+        request = {
+            'protocol': '0',
+            'msg': 'It is a good book',
+            'parent': '0',
+        }
+        # add comment
+        client.post("/user_app/comment_section/1/", request)
+        client.post("/user_app/comment_section/1/", request)
+        client.post('/user_app/logout/', request)
+
+        # get the comment
+        response = client.get("/user_app/comment_section/1/")
+        print(json.loads(response.content.decode())['msg'])
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+
+class SubscribeBookTestCase(TestCase):
+    def setUp(self):
+        # create user
+        User.objects.create_user(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+        # create user_info
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
+        )
+        # create book_info
+        models.BookInfo.objects.create(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+
+    def test_subscribe_book(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        # login in
+        client.post('/user_app/login/', request)
+
+        request = {
+            'bid': '1',
+        }
+        # subscribe book
+        response = client.post('/user_app/subscribe_book/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+        # subscribe a book which has been subscribed
+        response = client.post('/user_app/subscribe_book/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
