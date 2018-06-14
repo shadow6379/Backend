@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.db import utils
 from django.db import transaction
+from django.db.models import Avg
 
 from user_app import models
 from user_app.email_token import token_confirm
@@ -412,11 +413,12 @@ def star_book(request):
         result['status'] = 'failure'
         result['error_msg'] = 'You have starred'
         return HttpResponse(json.dumps(result))
-    '''
+    # update the score oof the book
     book = models.BookInfo.objects.get(id=book_id)
-    book.score = star
+    score = models.ScoreToBook.objects.filter(bid=book).aggregate(Avg('score'))
+    book.score = score['score__avg']
     book.save()
-    '''
+    print(book.score)
     result['status'] = 'success'
     return HttpResponse(json.dumps(result))
 
