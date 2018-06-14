@@ -232,6 +232,16 @@ class InventoryManagement(View):
             result['error_msg'] = 'key required'
             return HttpResponse(json.dumps(result))
 
+        # keyword is ISBN
+        book_by_ISBN = tmp.BookInfo.objects.filter(ISBN=key).first()
+        if book_by_ISBN is not None:
+            book_dict = dict()
+            book = process_book_obj(book_by_ISBN)
+            book_dict[str(book_by_ISBN.id)] = json.dumps(book)
+            result['msg'] = json.dumps(book_dict)
+            result['status'] = "success"
+            return HttpResponse(json.dumps(result))
+
         # keyword in book name
         books_by_name = tmp.BookInfo.objects.filter(name__icontains=key)
         # keyword in author name
