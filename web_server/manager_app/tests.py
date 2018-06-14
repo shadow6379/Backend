@@ -228,6 +228,10 @@ class InventoryManagementTestCase(TestCase):
         client.post('/manager_app/login/', request)
 
         request = {}
+        response = client.get('/manager_app/inventory_management/?key=ISBN', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {}
         response = client.get('/manager_app/inventory_management/?key=name', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
