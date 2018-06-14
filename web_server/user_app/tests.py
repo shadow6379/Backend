@@ -206,21 +206,21 @@ class RetrieveTestCase(TestCase):
         request = {
             'key': 'name'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         # fuzzy matching
         request = {
             'key': 'auth'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         # failed matching
         request = {
             'key': 'failed'
         }
-        response = client.post('/user_app/retrieve/', request)
+        response = client.get('/user_app/retrieve/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failed')
 
 
