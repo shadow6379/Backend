@@ -108,6 +108,55 @@ class ReportInfoBoxTestCase(TestCase):
             email='test@163.com',
         )
 
+        User.objects.create_user(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+        user = User.objects.filter(username='test').first()
+        u = tmp.UserInfo.objects.create(
+            user=user,
+        )
+        u.save()
+
+        b = tmp.BookInfo(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+        b.save()
+
+        c = tmp.Comment(
+            uid=u,
+            bid=b,
+            content='MySQL, Redis'
+        )
+        c.save()
+
+        tmp.AttitudeRecord.objects.create(
+            cid=c,
+            uid=u,
+            attitude=2,
+            report_reason=4,
+        )
+
+    def test_get(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
     def test_post(self):
         client = Client()
 
@@ -118,6 +167,20 @@ class ReportInfoBoxTestCase(TestCase):
         client.post('/manager_app/login/', request)
 
         request = {
+            'protocol': '1',
+            'cid': '1',
+        }
+        response = client.post('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'cid': '1',
+        }
+        response = client.post('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
             'protocol': '2',
             'cid': '1',
         }
@@ -126,7 +189,125 @@ class ReportInfoBoxTestCase(TestCase):
 
 
 class InventoryManagementTestCase(TestCase):
-    pass
+    def setUp(self):
+        models.ManagerInfo.objects.create(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+
+        tmp.TypeInfo.objects.create(
+            name='computer'
+        )
+
+        book = tmp.BookInfo(
+            name='name',
+            author='author',
+            brief='brief',
+            ISBN='ISBN',
+            publish_time='publish time',
+            press='press',
+            contents='contents',
+        )
+        book.save()
+        book.types.set([1])
+        book.save()
+
+        tmp.BookInstance.objects.create(
+            bid=book,
+            state=0,
+        )
+
+    def test_get(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/?key=name', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/?key=author', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {}
+        response = client.get('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+    def test_post(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {
+            'protocol': '0',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'test',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        print(json.loads(response.content.decode())['error_msg'])
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'test',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        request = {
+            'protocol': '1',
+            'msg': {
+                'cover': '',
+                'name': '',
+                'author': '',
+                'brief': '',
+                'ISBN': 'ISBN',
+                'publish_time': '',
+                'press': '',
+                'contents': '',
+                'inventory': '2',
+                'types': {},
+            },
+        }
+        request['msg']['types'] = json.dumps(request['msg']['types'])
+        request['msg'] = json.dumps(request['msg'])
+        response = client.post('/manager_app/inventory_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
 
 class DebitTestCase(TestCase):

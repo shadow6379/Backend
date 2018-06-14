@@ -125,6 +125,7 @@ class CategoryTestCase(TestCase):
             )
             obj.save()
             obj.types.set([1])
+            obj.save()
 
     def test_category(self):
         client = Client()
