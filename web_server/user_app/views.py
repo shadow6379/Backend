@@ -8,15 +8,16 @@ from django.contrib.auth import logout as logout_confirm
 from django.contrib.auth import authenticate
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.db import utils
+from django.db import transaction
 
 from user_app import models
-from django.db.models import Q
 from user_app.email_token import token_confirm
 from django.core.mail import send_mail
 from web_server.settings import EMAIL_HOST_USER, DOMAIN, DEBUG
 from user_app.utils.method_test import is_post
 from user_app.utils.method_test import is_get
-from user_app.utils.db_to_dict import process_book_obj, process_user_obj
+from user_app.utils.db_to_dict import process_book_obj, process_user_obj, comment_to_dict
 # the website
 
 # Create your views here.
@@ -312,23 +313,217 @@ def collect_book(request):
 
 @login_required
 def subscribe_book(request):
-    pass
+    """
+    :param request:
+    request.POST.get('bid')
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+
+    # handle wrong method
+    if not is_post(request, result):
+        return HttpResponse(json.dumps(result))
+
+    book_id = request.POST.get('bid')
+    # if doesn't contain the book's id
+    if not book_id:
+        result['status'] = 'failure'
+        result['error_msg'] = "must offer the book's id"
+        return HttpResponse(json.dumps(result))
+    # if the book doesn't exist
+    book = models.BookInfo.objects.filter(id=int(book_id))
+    if not book:
+        result['status'] = 'failure'
+        result['error_msg'] = "the book doesn't exist"
+        return HttpResponse(json.dumps(result))
+
+    book = book[0]
+    user = models.UserInfo.objects.get(user=request.user)
+    book_state = models.BookInstance.objects.filter(bid=book)
+    with transaction.atomic():
+        # if not exist
+        if not book_state:
+            # print("not book_state")
+            book_state = models.BookInstance.objects.create(
+                bid=book,
+                state=1,
+            )
+            models.ActiveRecord.objects.create(
+                uid=user,
+                bid=book_state,
+                active=0,
+            )
+            result['status'] = 'success'
+            return HttpResponse(json.dumps(result))
+        # if the book's state is not normal
+        elif book_state[0].state != 0:
+            # print("book_state not equal 0")
+            result['status'] = 'failure'
+            result['error_msg'] = "the book has been subscribed or borrowed"
+            return HttpResponse(json.dumps(result))
+        elif book_state[0].state == 0:
+            # print("book_state equal 0")
+            book_state[0].state = 1,
+            book_state[0].save()
+            models.ActiveRecord.objects.create(
+                uid=user,
+                bid=book_state[0],
+                active=0,
+            )
+            result['status'] = 'success'
+            return HttpResponse(json.dumps(result))
 
 
 @login_required
 def star_book(request):
-    pass
+    """
+    :param request:
+    request.POST.get('bid')
+    request.POST.get('star')
+    :return:
+    HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'error_msg': '',  # notes of failure
+    }
+    # get the book's id and the score to the book
+    book_id = int(request.POST.get('bid'))
+    star = int(request.POST.get('star'))
+    # if the score not in [1, 5], return failure
+    if star < 1 or star > 5:
+        result['status'] = 'failure'
+        result['error_msg'] = 'Score out of field'
+        return HttpResponse(json.dumps(result))
+    # user_info = models.UserInfo.objects.get(user=request.user)
+    # book_info = models.UserInfo.objects.get(id=book_id)
+    try:
+        score_to_book = models.ScoreToBook.objects.create(
+            uid_id=request.user.id,
+            bid_id=book_id,
+            score=star,
+        )
+    # if you have starred the book, return failure
+    except utils.IntegrityError:
+        result['status'] = 'failure'
+        result['error_msg'] = 'You have starred'
+        return HttpResponse(json.dumps(result))
+    '''
+    book = models.BookInfo.objects.get(id=book_id)
+    book.score = star
+    book.save()
+    '''
+    result['status'] = 'success'
+    return HttpResponse(json.dumps(result))
 
 
 class CommentSection(View):
     @staticmethod
-    def get(request):
-        pass
+    def get(request, bid):
+        """
+        :param request:
+        :param bid: book's id
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        print("get")
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # information of the comment section
+            'error_msg': '',  # notes of failure
+        }
+        # get all the comment on this book
+        comment = dict()
+        comment_all = models.Comment.objects.filter(bid_id=int(bid)).order_by('comment_time')
+        # print(comment_all)
+        # print(comment_all.count())
+        # the comment represented like comments in weibo
+        for i in range(comment_all.count()):
+            parent_id = comment_all[i].parent_comment_id
+            if parent_id == 0:
+                temp = dict()
+                temp[comment_all[i].id] = comment_to_dict(comment_all[i])
+                comment[comment_all[i].id] = temp
+            else:
+                if comment.get(parent_id):
+                    comment[parent_id][comment_all[i].id] = comment_to_dict(comment_all[i])
+                else:
+                    for comment_temp in comment:
+                        if comment_temp.get(parent_id):
+                            comment_temp[parent_id] = comment_to_dict(comment_all[i])
+
+        result['msg'] = json.dumps(comment)
+        result['status'] = 'success'
+        return HttpResponse(json.dumps(result))
 
     @staticmethod
     @login_required
-    def post(request):
-        pass
+    def post(request, bid):
+        """
+        :param request:
+        :param bid: book's id
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+        protocol = request.POST.get('protocol')
+        msg = request.POST.get('msg')
+        parent = request.POST.get('parent')
+        # get the user
+        user = models.UserInfo.objects.get(user=request.user)
+
+        # if protocol is 0, represent comment
+        # you can comment a book more than one time
+        if protocol == '0':
+            comment = models.Comment.objects.create(
+                uid=user,
+                bid_id=int(bid),
+                content=msg,
+                parent_comment_id=int(parent),
+            )
+            result['status'] = 'success'
+            return HttpResponse(json.dumps(result))
+        # if protocol is 1, represent agree
+        # if protocol is 2, represent disagree
+        # You can only do this once.
+        elif protocol == '1' or protocol == '2':
+            comment = models.Comment.objects.get(id=int(parent))
+            try:
+                models.AttitudeRecord.objects.create(
+                    cid=comment,
+                    uid_id=bid,
+                    attitude=int(protocol)-1,
+                )
+                result['status'] = 'success'
+            except utils.IntegrityError:
+                result['status'] = 'failure'
+                result['error_msg'] = 'You have give your attitude on this comment'
+            finally:
+                return HttpResponse(json.dumps(result))
+        # if protocol is 3, represent report
+        # You can only do this once.
+        elif protocol == '3':
+            comment = models.Comment.objects.get(id=int(parent))
+            try:
+                models.AttitudeRecord.objects.create(
+                    cid=comment,
+                    bid_id=bid,
+                    attitude=int(protocol)-1,
+                    report_reason = int(request.POST.get('reason'))
+                )
+                result['status'] = 'success'
+            except utils.IntegrityError:
+                result['status'] = 'failure'
+                result['error_msg'] = 'You have already reported it.'
+            finally:
+                return HttpResponse(json.dumps(result))
 
 
 class UserProfile(View):
