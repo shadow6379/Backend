@@ -307,7 +307,7 @@ class TypeManagement(View):
                 result['status'] = 'failure'
                 result['error_msg'] = 'invalid type'
                 return HttpResponse(json.dumps(result))
-            
+
             try:
                 target.update(name=new)
             except:
@@ -429,27 +429,29 @@ class InventoryManagement(View):
                     return HttpResponse(json.dumps(result))
                 types.append(t.id)
 
-            # create book obj
-            book = tmp.BookInfo(
-                cover=msg['cover'],
-                name=msg['name'],
-                author=msg['author'],
-                brief=msg['brief'],
-                ISBN=msg['ISBN'],
-                publish_time=msg['publish_time'],
-                press=msg['press'],
-                contents=msg['contents'],
-            )
-            book.save()
-            book.types.set(types)
-            book.save()
-
-            # create book instance
-            for i in range(int(msg['inventory'])):
-                tmp.BookInstance.objects.create(
-                    bid=book,
-                    state=0,
+            # start a transaction
+            with transaction.atomic():
+                # create book obj
+                book = tmp.BookInfo(
+                    cover=msg['cover'],
+                    name=msg['name'],
+                    author=msg['author'],
+                    brief=msg['brief'],
+                    ISBN=msg['ISBN'],
+                    publish_time=msg['publish_time'],
+                    press=msg['press'],
+                    contents=msg['contents'],
                 )
+                book.save()
+                book.types.set(types)
+                book.save()
+
+                # create book instance
+                for i in range(int(msg['inventory'])):
+                    tmp.BookInstance.objects.create(
+                        bid=book,
+                        state=0,
+                    )
         elif protocol == '1':
             book = tmp.BookInfo.objects.filter(ISBN=msg['ISBN']).first()
 
@@ -477,22 +479,24 @@ class InventoryManagement(View):
                     return HttpResponse(json.dumps(result))
                 types.append(t.id)
 
-            book.cover = msg['cover']
-            book.name = msg['name']
-            book.author = msg['author']
-            book.brief = msg['brief']
-            book.publish_time = msg['publish_time']
-            book.press = msg['press']
-            book.contents = msg['contents']
-            book.types.set(types)
-            book.save()
+            # start a transaction
+            with transaction.atomic():
+                book.cover = msg['cover']
+                book.name = msg['name']
+                book.author = msg['author']
+                book.brief = msg['brief']
+                book.publish_time = msg['publish_time']
+                book.press = msg['press']
+                book.contents = msg['contents']
+                book.types.set(types)
+                book.save()
 
-            # create book instance
-            for i in range(int(msg['inventory']) - count):
-                tmp.BookInstance.objects.create(
-                    bid=book,
-                    state=0,
-                )
+                # create book instance
+                for i in range(int(msg['inventory']) - count):
+                    tmp.BookInstance.objects.create(
+                        bid=book,
+                        state=0,
+                    )
         else:
             result['status'] = 'failure'
             result['error_msg'] = 'invalid protocol'
