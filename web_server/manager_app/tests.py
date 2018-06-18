@@ -1,6 +1,7 @@
 import json
 
 from django.test import TestCase
+from django.test import TransactionTestCase
 from django.test import Client
 from django.contrib.auth.models import User
 
@@ -185,6 +186,105 @@ class ReportInfoBoxTestCase(TestCase):
             'cid': '1',
         }
         response = client.post('/manager_app/report_info_box/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+
+class TypeManagementTestCase(TransactionTestCase):
+    def setUp(self):
+        models.ManagerInfo.objects.create(
+            username='test',
+            password='123456',
+            email='test@163.com',
+        )
+
+        tmp.TypeInfo.objects.create(
+            name='computer'
+        )
+
+    def test_get(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {}
+        response = client.get('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+    def test_post(self):
+        client = Client()
+
+        request = {
+            'username': 'test',
+            'password': '123456',
+        }
+        client.post('/manager_app/login/', request)
+
+        request = {
+            'protocol': '0',
+            'old': '',
+            'new': '',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'old': '',
+            'new': '',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        request = {
+            'protocol': '1',
+            'old': '',
+            'new': '',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '1',
+            'old': '',
+            'new': '',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        request = {
+            'protocol': '2',
+            'old': 'computer',
+            'new': '',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '0',
+            'old': '',
+            'new': 'computer',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+
+        request = {
+            'protocol': '2',
+            'old': '',
+            'new': 'computer',
+        }
+        response = client.post('/manager_app/type_management/', request)
+        self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+        request = {
+            'protocol': '2',
+            'old': '22',
+            'new': '33',
+        }
+        response = client.post('/manager_app/type_management/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
 
 

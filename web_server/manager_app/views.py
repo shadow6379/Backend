@@ -206,6 +206,123 @@ class ReportInfoBox(View):
         return HttpResponse(json.dumps(result))
 
 
+class TypeManagement(View):
+    @method_decorator(authenticate)
+    def dispatch(self, request, *args, **kwargs):
+        return super(TypeManagement, self).dispatch(request, *args, **kwargs)
+
+    @staticmethod
+    def get(request):
+        """
+        :param request:
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # information of the type
+            'error_msg': '',  # notes of failure
+        }
+
+        # get all types
+        types = tmp.TypeInfo.objects.all()
+
+        # change db obj into dict
+        type_dict = dict()
+        for i in range(types.count()):
+            type_dict[str(types[i].id)] = types[i].name
+        result['msg'] = json.dumps(type_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
+
+    @staticmethod
+    def post(request):
+        """
+        :param request:
+        :param request:
+        request.POST.get('protocol'): '0' means add type,
+                                    '1' means delete type,
+                                    '2' means update type,
+        request.POST.get('old')
+        request.POST.get('new')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        protocol = request.POST.get('protocol')
+        if protocol is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'protocol required'
+            return HttpResponse(json.dumps(result))
+
+        if protocol == '0':
+            new = request.POST.get('new')
+            if new is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'new required'
+                return HttpResponse(json.dumps(result))
+
+            try:
+                tmp.TypeInfo.objects.create(name=new)
+            except:
+                result['status'] = 'failure'
+                result['error_msg'] = 'this type is already in the db'
+                return HttpResponse(json.dumps(result))
+        elif protocol == '1':
+            old = request.POST.get('old')
+            if old is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'old required'
+                return HttpResponse(json.dumps(result))
+            target = tmp.TypeInfo.objects.filter(name=old)
+
+            # old type is not exist in the db
+            if target.count() == 0:
+                result['status'] = 'failure'
+                result['error_msg'] = 'invalid type'
+                return HttpResponse(json.dumps(result))
+            target.delete()
+        elif protocol == '2':
+            new = request.POST.get('new')
+            if new is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'new required'
+                return HttpResponse(json.dumps(result))
+
+            old = request.POST.get('old')
+            if old is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'old required'
+                return HttpResponse(json.dumps(result))
+
+            target = tmp.TypeInfo.objects.filter(name=old)
+
+            # old type is not exist in the db
+            if target.count() == 0:
+                result['status'] = 'failure'
+                result['error_msg'] = 'invalid type'
+                return HttpResponse(json.dumps(result))
+            
+            try:
+                target.update(name=new)
+            except:
+                result['status'] = 'failure'
+                result['error_msg'] = 'this type is already in the db'
+                return HttpResponse(json.dumps(result))
+        else:
+            result['status'] = 'failure'
+            result['error_msg'] = 'invalid protocol'
+            return HttpResponse(json.dumps(result))
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
+
+
 class InventoryManagement(View):
     @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
