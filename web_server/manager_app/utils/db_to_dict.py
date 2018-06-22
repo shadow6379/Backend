@@ -19,10 +19,10 @@ def process_record_obj(obj):
     record = dict()
 
     user = tmp.UserInfo.objects.filter(id=obj.uid.id).first()
-    book = tmp.BookInfo.objects.filter(id=obj.bid.id).first()
+    book = tmp.BookInstance.objects.filter(id=obj.bid.id).first()
 
     record['username'] = user.user.username
-    record['book'] = book.name
+    record['book'] = book.bid.name
     record['active_time'] = str(obj.active_time)
 
     return record
@@ -40,7 +40,7 @@ def process_book_obj(obj):
     book['publish_time'] = obj.publish_time
     book['press'] = obj.press
     book['contents'] = obj.contents
-    book['inventory'] = str(obj.book_instances.all().count())
+    book['inventory'] = str(obj.book_instances.filter(state=0).count())
 
     type_dict = dict()
     for t in obj.types.all():
