@@ -31,7 +31,7 @@ def registry(request):
     email = request.POST.get('email')
     username = request.POST.get('username')
     password = request.POST.get('password')
-
+    print(username, password)
     result = {
         'status': '',  # 'success' or 'failure'
         'error_msg': '',  # notes of failure
@@ -145,6 +145,7 @@ def login(request):
     """
     result = {
         'status': '',  # 'success' or 'failure'
+        'msg': '',  # user message
         'error_msg': '',  # notes of failure
     }
 
@@ -161,8 +162,15 @@ def login(request):
 
     if user is not None:
         # pass authentication
+        user_info = models.UserInfo.objects.get(user=user)
+        user_msg = dict()
         result['status'] = 'success'
+        user_msg['uid'] = str(user.id)
+        user_msg['username'] = user.username
+        user_msg['avatar'] = str(user_info.avatar)
+        result['msg'] = json.dumps(user_msg)
         login_confirm(request, user)
+
         return HttpResponse(json.dumps(result))
     else:
         result['status'] = 'failure'
