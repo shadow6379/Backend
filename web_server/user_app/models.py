@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 
 
 class TypeInfo(models.Model):
-    name = models.CharField(max_length=20)
+    name = models.CharField(max_length=20, unique=True)
 
     def __str__(self):
         return self.name
