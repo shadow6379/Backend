@@ -56,6 +56,10 @@ class LoginTestCase(TestCase):
             password='123456',
             email='test@163.com',
         )
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
+        )
 
     def test_login(self):
         client = Client()
@@ -95,6 +99,10 @@ class LogoutTestCase(TestCase):
             username='test',
             password='123456',
             email='test@163.com',
+        )
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
         )
 
     def test_logout(self):
@@ -185,12 +193,14 @@ class CollectBookTestCase(TestCase):
 
         request = {
             'bid': '1',
+            'protocol': '0',
         }
         response = client.post("/user_app/collect_book/", request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'success')
 
         request = {
             'bid': '3',
+            'protocol': '1',
         }
         response = client.post("/user_app/collect_book/", request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
@@ -346,6 +356,10 @@ class CommentSectionTestCase(TestCase):
         }
         # add comment
         client.post("/user_app/comment_section/1/", request)
+        client.post("/user_app/comment_section/1/", request)
+
+        request['protocol'] = '0'
+        request['parent'] = '2'
         client.post("/user_app/comment_section/1/", request)
         client.post('/user_app/logout/', request)
 

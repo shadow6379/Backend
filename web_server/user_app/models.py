@@ -15,7 +15,8 @@ class TypeInfo(models.Model):
 
 class BookInfo(models.Model):
     # showed in the home page
-    cover = models.ImageField(upload_to="uploads", null=True)
+    cover = models.CharField(max_length=255)
+    # cover = models.ImageField(upload_to="uploads", null=True)
     name = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     score = models.IntegerField(default=0)
@@ -40,7 +41,8 @@ class UserInfo(models.Model):
     user.email
     """
 
-    avatar = models.ImageField(height_field=150, width_field=150, null=True)
+    avatar = models.CharField(max_length=255)
+    # avatar = models.ImageField(height_field=150, width_field=150, null=True)
     # true for male, false for female
     gender = models.NullBooleanField(null=True)
     # user's phone number, default = ''

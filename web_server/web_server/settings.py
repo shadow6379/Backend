@@ -40,11 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'user_app',
     'manager_app',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -80,6 +82,15 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+
+
+# Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': 'cache_middleware:11211',
     }
 }
 
@@ -126,12 +137,12 @@ STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'uploads'),
 )
 
-DOMAIN = 'http://172.18.158.55:8000'
+DOMAIN = 'http://172.18.158.55:80'
 
 # setting the email server
 EMAIL_HOST = 'smtp.163.com'
-EMAIL_HOST_USER = '********@163.com'
-EMAIL_HOST_PASSWORD = '********'
+EMAIL_HOST_USER = '15975129956@163.com'
+EMAIL_HOST_PASSWORD = 'xiejiaxin123'
 EMAIL_PORT = 25
 EMAIL_USE_TLS = True
 
