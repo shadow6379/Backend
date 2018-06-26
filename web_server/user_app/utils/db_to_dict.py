@@ -46,7 +46,23 @@ def process_user_obj(obj):
     for t in user_info.collections.all():
         collection_dict[str(t.id)] = t.name
     user['collections'] = json.dumps(collection_dict)
+    subscribe_dict = dict()
+    borrow_dict = dict()
+    return_dict = dict()
+    active_books = models.ActiveRecord.objects.filter(uid=user_info)
+    if active_books:
+        for active_book in active_books:
+            book = models.BookInfo.objects.get(id=active_book.bid_id)
+            if active_book.active == 0:
+                subscribe_dict[str(book.id)] = book.name
+            elif active_book.active == 1:
+                borrow_dict[str(book.id)] = book.name
+            elif active_book.active == 2:
+                return_dict[str(book.id)] = book.name
 
+    user['subscribed'] = json.dumps(subscribe_dict)
+    user['borrowed'] = json.dumps(borrow_dict)
+    user['returned'] = json.dumps(return_dict)
     return user
 
 

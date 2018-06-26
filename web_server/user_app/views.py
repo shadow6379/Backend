@@ -31,7 +31,7 @@ def registry(request):
     email = request.POST.get('email')
     username = request.POST.get('username')
     password = request.POST.get('password')
-
+    print(username, password)
     result = {
         'status': '',  # 'success' or 'failure'
         'error_msg': '',  # notes of failure
@@ -145,6 +145,7 @@ def login(request):
     """
     result = {
         'status': '',  # 'success' or 'failure'
+        'msg': '',  # user message
         'error_msg': '',  # notes of failure
     }
 
@@ -161,8 +162,15 @@ def login(request):
 
     if user is not None:
         # pass authentication
+        user_info = models.UserInfo.objects.get(user=user)
+        user_msg = dict()
         result['status'] = 'success'
+        user_msg['uid'] = str(user.id)
+        user_msg['username'] = user.username
+        user_msg['avatar'] = str(user_info.avatar)
+        result['msg'] = json.dumps(user_msg)
         login_confirm(request, user)
+
         return HttpResponse(json.dumps(result))
     else:
         result['status'] = 'failure'
@@ -284,6 +292,7 @@ def collect_book(request):
     :param request:
     request.POST.get('bid'): book id
     request.user.id: user id
+    request.POST.get('protocol'): operation
     :return:
     HttpResponse(json.dumps(result))
     """
@@ -305,8 +314,14 @@ def collect_book(request):
         return HttpResponse(json.dumps(result))
 
     user = models.UserInfo.objects.filter(id=int(request.user.id)).first()
-    # add the book to user's collections
-    user.collections.add(int(request.POST.get('bid')))
+    operation = request.POST.get('protocol')
+    if operation == '1':
+        # add the book to user's collections
+        user.collections.add(int(request.POST.get('bid')))
+    elif operation == '0':
+        # remove the book from user's collections
+        user.collections.remove(int(request.POST.get('bid')))
+
     result['status'] = 'success'
 
     return HttpResponse(json.dumps(result))
