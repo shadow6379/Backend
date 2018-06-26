@@ -6,7 +6,6 @@ WORKDIR /web_server
 COPY web_server /web_server
 COPY cmd.sh /
 
-USER uwsgi
+# USER uwsgi
 
 CMD ["/cmd.sh"]
-
