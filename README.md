@@ -20,3 +20,8 @@ $docker run -e "ENV=UNIT" -p 8000:8000 web_server
 ```
 $docker run -p 8000:8000 web_server
 ```
+
+### deploy
+```
+$./deploy.sh
+```
