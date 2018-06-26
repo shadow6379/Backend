@@ -56,6 +56,10 @@ class LoginTestCase(TestCase):
             password='123456',
             email='test@163.com',
         )
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
+        )
 
     def test_login(self):
         client = Client()
@@ -95,6 +99,10 @@ class LogoutTestCase(TestCase):
             username='test',
             password='123456',
             email='test@163.com',
+        )
+        user = User.objects.filter(username='test').first()
+        models.UserInfo.objects.create(
+            user=user,
         )
 
     def test_logout(self):
