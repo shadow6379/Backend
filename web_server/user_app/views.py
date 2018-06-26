@@ -292,6 +292,7 @@ def collect_book(request):
     :param request:
     request.POST.get('bid'): book id
     request.user.id: user id
+    request.POST.get('protocol'): operation
     :return:
     HttpResponse(json.dumps(result))
     """
@@ -313,8 +314,14 @@ def collect_book(request):
         return HttpResponse(json.dumps(result))
 
     user = models.UserInfo.objects.filter(id=int(request.user.id)).first()
-    # add the book to user's collections
-    user.collections.add(int(request.POST.get('bid')))
+    operation = request.POST.get('protocol')
+    if operation == '1':
+        # add the book to user's collections
+        user.collections.add(int(request.POST.get('bid')))
+    elif operation == '0':
+        # remove the book from user's collections
+        user.collections.remove(int(request.POST.get('bid')))
+
     result['status'] = 'success'
 
     return HttpResponse(json.dumps(result))

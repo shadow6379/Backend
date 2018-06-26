@@ -206,6 +206,123 @@ class ReportInfoBox(View):
         return HttpResponse(json.dumps(result))
 
 
+class TypeManagement(View):
+    @method_decorator(authenticate)
+    def dispatch(self, request, *args, **kwargs):
+        return super(TypeManagement, self).dispatch(request, *args, **kwargs)
+
+    @staticmethod
+    def get(request):
+        """
+        :param request:
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'msg': '',  # information of the type
+            'error_msg': '',  # notes of failure
+        }
+
+        # get all types
+        types = tmp.TypeInfo.objects.all()
+
+        # change db obj into dict
+        type_dict = dict()
+        for i in range(types.count()):
+            type_dict[str(types[i].id)] = types[i].name
+        result['msg'] = json.dumps(type_dict)
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
+
+    @staticmethod
+    def post(request):
+        """
+        :param request:
+        :param request:
+        request.POST.get('protocol'): '0' means add type,
+                                    '1' means delete type,
+                                    '2' means update type,
+        request.POST.get('old')
+        request.POST.get('new')
+        :return:
+        HttpResponse(json.dumps(result))
+        """
+        result = {
+            'status': '',  # 'success' or 'failure'
+            'error_msg': '',  # notes of failure
+        }
+
+        protocol = request.POST.get('protocol')
+        if protocol is None:
+            result['status'] = 'failure'
+            result['error_msg'] = 'protocol required'
+            return HttpResponse(json.dumps(result))
+
+        if protocol == '0':
+            new = request.POST.get('new')
+            if new is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'new required'
+                return HttpResponse(json.dumps(result))
+
+            try:
+                tmp.TypeInfo.objects.create(name=new)
+            except:
+                result['status'] = 'failure'
+                result['error_msg'] = 'this type is already in the db'
+                return HttpResponse(json.dumps(result))
+        elif protocol == '1':
+            old = request.POST.get('old')
+            if old is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'old required'
+                return HttpResponse(json.dumps(result))
+            target = tmp.TypeInfo.objects.filter(name=old)
+
+            # old type is not exist in the db
+            if target.count() == 0:
+                result['status'] = 'failure'
+                result['error_msg'] = 'invalid type'
+                return HttpResponse(json.dumps(result))
+            target.delete()
+        elif protocol == '2':
+            new = request.POST.get('new')
+            if new is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'new required'
+                return HttpResponse(json.dumps(result))
+
+            old = request.POST.get('old')
+            if old is None:
+                result['status'] = 'failure'
+                result['error_msg'] = 'old required'
+                return HttpResponse(json.dumps(result))
+
+            target = tmp.TypeInfo.objects.filter(name=old)
+
+            # old type is not exist in the db
+            if target.count() == 0:
+                result['status'] = 'failure'
+                result['error_msg'] = 'invalid type'
+                return HttpResponse(json.dumps(result))
+
+            try:
+                target.update(name=new)
+            except:
+                result['status'] = 'failure'
+                result['error_msg'] = 'this type is already in the db'
+                return HttpResponse(json.dumps(result))
+        else:
+            result['status'] = 'failure'
+            result['error_msg'] = 'invalid protocol'
+            return HttpResponse(json.dumps(result))
+        result['status'] = 'success'
+
+        return HttpResponse(json.dumps(result))
+
+
 class InventoryManagement(View):
     @method_decorator(authenticate)
     def dispatch(self, request, *args, **kwargs):
@@ -230,6 +347,16 @@ class InventoryManagement(View):
         if key is None:
             result['status'] = 'failure'
             result['error_msg'] = 'key required'
+            return HttpResponse(json.dumps(result))
+
+        # keyword is ISBN
+        book_by_ISBN = tmp.BookInfo.objects.filter(ISBN=key).first()
+        if book_by_ISBN is not None:
+            book_dict = dict()
+            book = process_book_obj(book_by_ISBN)
+            book_dict[str(book_by_ISBN.id)] = json.dumps(book)
+            result['msg'] = json.dumps(book_dict)
+            result['status'] = "success"
             return HttpResponse(json.dumps(result))
 
         # keyword in book name
@@ -302,27 +429,29 @@ class InventoryManagement(View):
                     return HttpResponse(json.dumps(result))
                 types.append(t.id)
 
-            # create book obj
-            book = tmp.BookInfo(
-                cover=msg['cover'],
-                name=msg['name'],
-                author=msg['author'],
-                brief=msg['brief'],
-                ISBN=msg['ISBN'],
-                publish_time=msg['publish_time'],
-                press=msg['press'],
-                contents=msg['contents'],
-            )
-            book.save()
-            book.types.set(types)
-            book.save()
-
-            # create book instance
-            for i in range(int(msg['inventory'])):
-                tmp.BookInstance.objects.create(
-                    bid=book,
-                    state=0,
+            # start a transaction
+            with transaction.atomic():
+                # create book obj
+                book = tmp.BookInfo(
+                    cover=msg['cover'],
+                    name=msg['name'],
+                    author=msg['author'],
+                    brief=msg['brief'],
+                    ISBN=msg['ISBN'],
+                    publish_time=msg['publish_time'],
+                    press=msg['press'],
+                    contents=msg['contents'],
                 )
+                book.save()
+                book.types.set(types)
+                book.save()
+
+                # create book instance
+                for i in range(int(msg['inventory'])):
+                    tmp.BookInstance.objects.create(
+                        bid=book,
+                        state=0,
+                    )
         elif protocol == '1':
             book = tmp.BookInfo.objects.filter(ISBN=msg['ISBN']).first()
 
@@ -350,22 +479,24 @@ class InventoryManagement(View):
                     return HttpResponse(json.dumps(result))
                 types.append(t.id)
 
-            book.cover = msg['cover']
-            book.name = msg['name']
-            book.author = msg['author']
-            book.brief = msg['brief']
-            book.publish_time = msg['publish_time']
-            book.press = msg['press']
-            book.contents = msg['contents']
-            book.types.set(types)
-            book.save()
+            # start a transaction
+            with transaction.atomic():
+                book.cover = msg['cover']
+                book.name = msg['name']
+                book.author = msg['author']
+                book.brief = msg['brief']
+                book.publish_time = msg['publish_time']
+                book.press = msg['press']
+                book.contents = msg['contents']
+                book.types.set(types)
+                book.save()
 
-            # create book instance
-            for i in range(int(msg['inventory']) - count):
-                tmp.BookInstance.objects.create(
-                    bid=book,
-                    state=0,
-                )
+                # create book instance
+                for i in range(int(msg['inventory']) - count):
+                    tmp.BookInstance.objects.create(
+                        bid=book,
+                        state=0,
+                    )
         else:
             result['status'] = 'failure'
             result['error_msg'] = 'invalid protocol'
