@@ -462,7 +462,7 @@ class InventoryManagement(View):
                 return HttpResponse(json.dumps(result))
 
             # book instance can not be deleted
-            count = book.book_instances.all().count()
+            count = book.book_instances.filter(state=0).count()
             if count > int(msg['inventory']):
                 result['status'] = 'failure'
                 result['error_msg'] = 'can not delete book instance'
@@ -595,20 +595,35 @@ class Debit(View):
         # start a transaction
         with transaction.atomic():
             # get the book instance
-            book_instance = book.book_instances.filter(state=0).first()
-            if book_instance is None:
-                result['status'] = 'failure'
-                result['error_msg'] = 'inadequate inventory'
-                return HttpResponse(json.dumps(result))
-            book_instance.state = 2
-            book_instance.save()
+            book_instance = book.book_instances.filter(state=1).first()
+            if book_instance:
+                book_instance.state = 2
+                book_instance.save()
+                tmp.ActiveRecord.objects.get(
+                    uid=user,
+                    bid=book_instance,
+                    active=0,
+                ).delete()
+                # record debit
+                tmp.ActiveRecord.objects.create(
+                    uid=user,
+                    bid=book_instance,
+                    active=1,
+                )
+            elif book_instance is None:
+                book_instance_new = book.book_instances.filter(state=0).first()
+                if book_instance_new is None:
+                    result['status'] = 'failure'
+                    result['error_msg'] = 'inadequate inventory'
+                    return HttpResponse(json.dumps(result))
+                book_instance_new.state = 2
+                book_instance_new.save()
+                tmp.ActiveRecord.objects.create(
+                    uid=user,
+                    bid=book_instance_new,
+                    active=1,
+                )
 
-            # record debit
-            tmp.ActiveRecord.objects.create(
-                uid=user,
-                bid=book_instance,
-                active=1,
-            )
         result['status'] = 'success'
 
         return HttpResponse(json.dumps(result))

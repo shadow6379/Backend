@@ -312,9 +312,10 @@ def collect_book(request):
         result['status'] = 'failure'
         result['error_msg'] = 'invalid book id'
         return HttpResponse(json.dumps(result))
-
-    user = models.UserInfo.objects.filter(id=int(request.user.id)).first()
+    print(request.user.id)
+    user = models.UserInfo.objects.filter(user_id=int(request.user.id)).first()
     operation = request.POST.get('protocol')
+    print(operation)
     if operation == '1':
         # add the book to user's collections
         user.collections.add(int(request.POST.get('bid')))
@@ -351,7 +352,9 @@ def subscribe_book(request):
         result['error_msg'] = "must offer the book's id"
         return HttpResponse(json.dumps(result))
     # if the book doesn't exist
+    print(book_id)
     book = models.BookInfo.objects.filter(id=int(book_id))
+
     if not book:
         result['status'] = 'failure'
         result['error_msg'] = "the book doesn't exist"
@@ -359,35 +362,21 @@ def subscribe_book(request):
 
     book = book[0]
     user = models.UserInfo.objects.get(user=request.user)
-    book_state = models.BookInstance.objects.filter(bid=book)
+    book_state = models.BookInstance.objects.filter(bid=book, state=0)
     with transaction.atomic():
-        # if not exist
+        # if no stock
         if not book_state:
             # print("not book_state")
-            book_state = models.BookInstance.objects.create(
-                bid=book,
-                state=1,
-            )
+            result['status'] = 'failure'
+            result['error_msg'] = "the book has no stock"
+            return HttpResponse(json.dumps(result))
+        else:
+            book_state = book_state[0]
+            book_state.state = 1
+            book_state.save()
             models.ActiveRecord.objects.create(
                 uid=user,
                 bid=book_state,
-                active=0,
-            )
-            result['status'] = 'success'
-            return HttpResponse(json.dumps(result))
-        # if the book's state is not normal
-        elif book_state[0].state != 0:
-            # print("book_state not equal 0")
-            result['status'] = 'failure'
-            result['error_msg'] = "the book has been subscribed or borrowed"
-            return HttpResponse(json.dumps(result))
-        elif book_state[0].state == 0:
-            # print("book_state equal 0")
-            book_state[0].state = 1,
-            book_state[0].save()
-            models.ActiveRecord.objects.create(
-                uid=user,
-                bid=book_state[0],
                 active=0,
             )
             result['status'] = 'success'
@@ -611,8 +600,17 @@ class UserProfile(View):
             user.set_password(request.POST.get('new_password'))
             user.save()
 
+        if DEBUG:
+            print('change_info')
+
         if request.POST.get('other'):
-            user_info.gender = request.POST.get('other')
+            user_info.other = request.POST.get('other')
+
+        if request.POST.get('avatar'):
+            user_info.avatar = request.POST.get('avatar')
+
+        if request.POST.get('phone'):
+            user_info.phone = request.POST.get('phone')
 
         result['status'] = 'success'
 
@@ -672,6 +670,31 @@ def retrieve(request):
 
     result['status'] = "success"
     result['msg'] = json.dumps(book_dict)
+
+    return HttpResponse(json.dumps(result))
+
+
+def book_type(request):
+    """
+    :param request:
+    :return:
+        HttpResponse(json.dumps(result))
+    """
+    result = {
+        'status': '',  # 'success' or 'failure'
+        'msg': '',  # information of the type
+        'error_msg': '',  # notes of failure
+    }
+
+    # get all types
+    types = models.TypeInfo.objects.all()
+
+    # change db obj into dict
+    type_dict = dict()
+    for i in range(types.count()):
+        type_dict[str(types[i].id)] = types[i].name
+    result['msg'] = json.dumps(type_dict)
+    result['status'] = 'success'
 
     return HttpResponse(json.dumps(result))
 
