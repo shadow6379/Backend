@@ -22,6 +22,7 @@ def process_record_obj(obj):
     book = tmp.BookInstance.objects.filter(id=obj.bid.id).first()
 
     record['username'] = user.user.username
+    record['bid'] = book.bid.id
     record['book'] = book.bid.name
     record['active_time'] = str(obj.active_time)
 

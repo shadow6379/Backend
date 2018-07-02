@@ -392,6 +392,10 @@ class SubscribeBookTestCase(TestCase):
             press='press',
             contents='contents',
         )
+        models.BookInstance.objects.create(
+            bid=models.BookInfo.objects.filter(id=1).first(),
+            state=0,
+        )
 
     def test_subscribe_book(self):
         client = Client()
@@ -412,3 +416,17 @@ class SubscribeBookTestCase(TestCase):
         # subscribe a book which has been subscribed
         response = client.post('/user_app/subscribe_book/', request)
         self.assertEqual(json.loads(response.content.decode())['status'], 'failure')
+
+
+class BookTypeTestCase(TestCase):
+    def setUp(self):
+        models.TypeInfo.objects.create(
+            name='computer'
+        )
+
+    def test_book_type(self):
+        client = Client()
+
+        response = client.get('/user_app/book_type/')
+        self.assertEqual(json.loads(response.content.decode())['status'], 'success')
+

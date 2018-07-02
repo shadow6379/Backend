@@ -444,7 +444,7 @@ class DebitTestCase(TestCase):
 
         tmp.BookInstance.objects.create(
             bid=tmp.BookInfo.objects.filter(id=1).first(),
-            state=0,
+            state=1,
         )
 
         tmp.ActiveRecord.objects.create(
