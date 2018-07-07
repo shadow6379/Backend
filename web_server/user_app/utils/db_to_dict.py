@@ -14,6 +14,7 @@ def process_book_obj(obj):
     book['publish_time'] = obj.publish_time
     book['press'] = obj.press
     book['contents'] = obj.contents
+    book['inventory'] = str(obj.book_instances.filter(state=0).count())
 
     type_dict = dict()
     for t in obj.types.all():
@@ -52,7 +53,8 @@ def process_user_obj(obj):
     active_books = models.ActiveRecord.objects.filter(uid=user_info)
     if active_books:
         for active_book in active_books:
-            book = models.BookInfo.objects.get(id=active_book.bid_id)
+            book_instance = models.BookInstance.objects.get(id=active_book.bid_id)
+            book = models.BookInfo.objects.get(id=book_instance.bid_id)
             if active_book.active == 0:
                 subscribe_dict[str(book.id)] = book.name
             elif active_book.active == 1:
